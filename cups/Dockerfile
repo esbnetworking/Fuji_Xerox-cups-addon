@@ -32,6 +32,7 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         gcompat \
         libstdc++ \
         jq \
+        jbigkit \
         build-base \
         fribidi-dev \
         git \
@@ -40,7 +41,8 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         cups-dev \
         libusb-dev \
         groff \
-        perl && \
+        perl \
+        jbigkit-dev && \
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
@@ -49,30 +51,7 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     make install-extra && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc cups-dev libusb-dev groff
-
-# Build the open-source rastertokpsl filter for Kyocera GDI (KPSL) printers
-# (FS-1040/1041, FS-1060DN/1061DN, FS-1020/1025/1120/1125MFP). Their PPDs
-# reference /usr/lib/cups/filter/rastertokpsl; the official filter is
-# proprietary and not available in the Alpine repositories, so compile the
-# vendored Apache-2.0 re-implementation (sv99/rastertokpsl-re).
-COPY rastertokpsl /tmp/rastertokpsl
-RUN \
-    apk add --no-cache --virtual .rastertokpsl-build \
-        gcc \
-        musl-dev \
-        cups-dev && \
-    gcc -O2 -o /usr/lib/cups/filter/rastertokpsl \
-        /tmp/rastertokpsl/main.c \
-        /tmp/rastertokpsl/rastertokpsl.c \
-        /tmp/rastertokpsl/halfton.c \
-        /tmp/rastertokpsl/libjbig/jbig.c \
-        /tmp/rastertokpsl/libjbig/jbig_ar.c \
-        /tmp/rastertokpsl/unicode/ConvertUTF.c \
-        -I/tmp/rastertokpsl \
-        -lcups -lm && \
-    rm -rf /tmp/rastertokpsl && \
-    apk del .rastertokpsl-build
+    apk del build-base git make bc cups-dev libusb-dev groff jbigkit-dev
 
 # Build and install the Dymo CUPS drivers (LabelWriter/LabelManager). The
 # Dymo PPDs (e.g. lw4xl.ppd for the LabelWriter 4XL) reference
