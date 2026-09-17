@@ -34,26 +34,27 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         jq \
         jbigkit \
         bash \
+        which \
         build-base \
         fribidi-dev \
         git \
         make \
         bc \
-        wget \
         cups-dev \
         libusb-dev \
-        groff \
-        perl \
         jbigkit-dev && \
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
-    make CFLAGS="-O2 -D_GNU_SOURCE" && \
-    make install && \
-    make install-extra && \
+    make CFLAGS="-O2 -D_GNU_SOURCE" foo2hbpl2 && \
+    install -c -m 755 foo2hbpl2 /usr/bin/ && \
+    install -c -m 755 foo2hbpl2-wrapper /usr/bin/ && \
+    mkdir -p /usr/share/cups/model/Fuji-Xerox && \
+    cp PPD/Fuji_Xerox-DocuPrint_CM205.ppd /usr/share/cups/model/Fuji-Xerox/ 2>/dev/null || \
+    cp PPD/*CM205*.ppd /usr/share/cups/model/Fuji-Xerox/ 2>/dev/null || true && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc wget cups-dev libusb-dev groff jbigkit-dev
+    apk del build-base git make bc which cups-dev libusb-dev jbigkit-dev
 
 # Build and install the Dymo CUPS drivers (LabelWriter/LabelManager). The
 # Dymo PPDs (e.g. lw4xl.ppd for the LabelWriter 4XL) reference
