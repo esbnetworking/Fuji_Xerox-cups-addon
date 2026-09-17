@@ -26,17 +26,30 @@ RUN \
         libjpeg-turbo \
         net-snmp \
         epson-inkjet-printer-escpr \
-        printer-driver-foo2zjs-common \
-        printer-driver-foo2zjs \
         gutenprint \
         gutenprint-cups \
         avahi \
         dbus \
         gcompat \
         libstdc++ \
-        dpkg \
-        jq
+        jq \
+        build-base \
+        fribidi-dev \
+        git \
+        make \
+        bc && \
 
+# Build and install foo2zjs / foo2hbpl2 from source
+RUN \
+    git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
+    cd /tmp/foo2zjs && \
+    make && \
+    make install && \
+    make install-hotplug && \
+    cd / && \
+    rm -rf /tmp/foo2zjs && \
+# Clean up build-only packages to keep image light
+    apk del build-base git make bc
 # Build the open-source rastertokpsl filter for Kyocera GDI (KPSL) printers
 # (FS-1040/1041, FS-1060DN/1061DN, FS-1020/1025/1120/1125MFP). Their PPDs
 # reference /usr/lib/cups/filter/rastertokpsl; the official filter is
