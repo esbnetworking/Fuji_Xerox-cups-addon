@@ -33,11 +33,14 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         libstdc++ \
         jq \
         jbigkit \
+        bash \
+        foomatic-db-engine \
         build-base \
         fribidi-dev \
         git \
         make \
         bc \
+        wget \
         cups-dev \
         libusb-dev \
         groff \
@@ -51,7 +54,7 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     make install-extra && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc cups-dev libusb-dev groff jbigkit-dev
+    apk del build-base git make bc wget cups-dev libusb-dev groff jbigkit-dev
 
 # Build and install the Dymo CUPS drivers (LabelWriter/LabelManager). The
 # Dymo PPDs (e.g. lw4xl.ppd for the LabelWriter 4XL) reference
