@@ -26,6 +26,8 @@ RUN \
         libjpeg-turbo \
         net-snmp \
         epson-inkjet-printer-escpr \
+        printer-driver-foo2zjs-common \
+        printer-driver-foo2zjs \
         gutenprint \
         gutenprint-cups \
         avahi \
