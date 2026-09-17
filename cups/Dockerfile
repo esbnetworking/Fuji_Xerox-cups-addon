@@ -15,8 +15,7 @@ ENV CUPS_SERVERROOT=/share/cups/config
 # Gutenprint covers most printer models as a replacement.
 # Alpine splits this: `gutenprint` is libraries/tools only; `gutenprint-cups`
 # ships rastertogutenprint and the CUPS PPDs (Canon, HP, Brother, etc.).
-RUN \
-    echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/main" > /etc/apk/repositories && \
+RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/main" > /etc/apk/repositories && \
     echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/community" >> /etc/apk/repositories && \
     apk update && \
     apk add --no-cache \
@@ -37,17 +36,17 @@ RUN \
         fribidi-dev \
         git \
         make \
-        bc && \
-
-# Build and install foo2zjs / foo2hbpl2 from source
+        bc \
+        cups-dev \
+        libusb-dev && \
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     make && \
     make install && \
-    make install-hotplug && \
+    make install-foo2hbpl2 && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc
+    apk del build-base git make bc cups-dev libusb-dev
 
 # Build the open-source rastertokpsl filter for Kyocera GDI (KPSL) printers
 # (FS-1040/1041, FS-1060DN/1061DN, FS-1020/1025/1120/1125MFP). Their PPDs
