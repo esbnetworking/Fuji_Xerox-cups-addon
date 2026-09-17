@@ -34,7 +34,6 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         jq \
         jbigkit \
         bash \
-        foomatic-db-engine \
         build-base \
         fribidi-dev \
         git \
