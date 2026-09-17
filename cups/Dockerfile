@@ -38,15 +38,18 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         make \
         bc \
         cups-dev \
-        libusb-dev && \
+        libusb-dev \
+        groff \
+        perl && \
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
-    make && \
+    sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
+    make CFLAGS="-O2 -D_GNU_SOURCE" && \
     make install && \
-    make install-foo2hbpl2 && \
+    make install-extra && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc cups-dev libusb-dev
+    apk del build-base git make bc cups-dev libusb-dev groff
 
 # Build the open-source rastertokpsl filter for Kyocera GDI (KPSL) printers
 # (FS-1040/1041, FS-1060DN/1061DN, FS-1020/1025/1120/1125MFP). Their PPDs
