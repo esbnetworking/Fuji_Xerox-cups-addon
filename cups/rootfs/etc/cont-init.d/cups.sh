@@ -19,6 +19,7 @@ chmod -R 775 /share/cups
 # ─────────────────────────────────────────────────────────────
 cat > /share/cups/config/cupsd.conf << 'EOL'
 # Listen on all interfaces (Port covers TCP+UDP for IPP/AirPrint)
+ServerAlias *
 Port 631
 Listen /run/cups/cups.sock
 
