@@ -47,14 +47,22 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     cd jbigkit && \
     make lib && \
     cd .. && \
-    make CFLAGS="-O2 -D_GNU_SOURCE -I./jbigkit/libjbig" LDFLAGS="-L./jbigkit/libjbig" foo2hbpl2 && \
-    install -c -m 755 foo2hbpl2 /usr/bin/ && \
-    install -c -m 755 foo2hbpl2-wrapper /usr/bin/ && \
-    install -c -m 755 gipddecode /usr/bin/ 2>/dev/null || true && \
-    mkdir -p /usr/share/foo2hbpl2/icm && \
+    # Compile all printer filter engines and decoders
+    make CFLAGS="-O2 -D_GNU_SOURCE -I./jbigkit/libjbig" LDFLAGS="-L./jbigkit/libjbig" \
+        all-test && \
+    # Install all binaries and wrappers to /usr/bin
+    install -c -m 755 foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak /usr/bin/ && \
+    install -c -m 755 foo2*-wrapper /usr/bin/ && \
+    install -c -m 755 *decode /usr/bin/ 2>/dev/null || true && \
+    # Install all ICM color profiles
+    mkdir -p /usr/share/foo2zjs/icm /usr/share/foo2hbpl2/icm /usr/share/foo2hp/icm /usr/share/foo2qpdl/icm && \
+    cp -r icm/* /usr/share/foo2zjs/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2hbpl2/icm/ 2>/dev/null || true && \
+    cp -r icm/* /usr/share/foo2hp/icm/ 2>/dev/null || true && \
+    cp -r icm/* /usr/share/foo2qpdl/icm/ 2>/dev/null || true && \
+    # Install every PPD into CUPS model directory
     mkdir -p /usr/share/cups/model && \
-    find PPD -type f \( -name "*hbpl2*" -o -name "*HBPL2*" -o -name "*CM205*" -o -name "*cm205*" -o -name "*6000*" -o -name "*6015*" \) -exec cp {} /usr/share/cups/model/ \; && \
+    find PPD -type f -name "*.ppd" -exec cp {} /usr/share/cups/model/ \; && \
     cd / && \
     rm -rf /tmp/foo2zjs && \
     apk del build-base git make bc which cups-dev libusb-dev
