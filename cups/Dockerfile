@@ -48,17 +48,16 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         libusb-dev && \
     # Ensure /bin/bash exists for scripts with #!/bin/bash
     [ ! -f /bin/bash ] && [ -f /usr/bin/bash ] && ln -s /usr/bin/bash /bin/bash || true && \
-    # 1. Download and build JBIG-KIT
+    # 1. Download and compile JBIG-KIT static archive libjbig.a
     mkdir -p /tmp/jbigkit-src && \
     wget https://deb.debian.org/debian/pool/main/j/jbigkit/jbigkit_2.1.orig.tar.gz -O /tmp/jbigkit.tar.gz && \
     tar -xzf /tmp/jbigkit.tar.gz -C /tmp/jbigkit-src --strip-components=1 && \
-    cd /tmp/jbigkit-src/libjbig && \
-    make lib && \
-    # 2. Clone foo2zjs and patch musl compatibility
+    make -C /tmp/jbigkit-src/libjbig libjbig.a && \
+    # 2. Clone foo2zjs and patch for musl libc
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
-    # 3. Build engines and wrappers
+    # 3. Build engines, helper tools, and wrappers
     make CFLAGS="-O2 -D_GNU_SOURCE -I/tmp/jbigkit-src/libjbig" LDFLAGS="-L/tmp/jbigkit-src/libjbig" \
         foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak \
         foo2zjs-pstops arm2hpdl \
