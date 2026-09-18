@@ -1,15 +1,5 @@
 #!/usr/bin/with-contenv bash
 
-
-# Clean up any leftover pid and socket files from previous unclean shutdowns
-rm -f /run/cups/cupsd.pid \
-      /run/cups/cups.sock \
-      /run/dbus/pid \
-      /run/dbus/system_bus_socket \
-      /run/avahi-daemon/pid \
-      /run/avahi-daemon/socket \
-      /share/cups/state/cupsd.pid 2>/dev/null || true
-
 # ─────────────────────────────────────────────────────────────
 # Create CUPS data directories in the persistent HA share
 # ─────────────────────────────────────────────────────────────
@@ -244,16 +234,26 @@ lpinfo -m 2>/dev/null | head -20 || echo "CUPS not yet running; drivers will be 
 # D-Bus + Avahi so cupsd can advertise shared queues as AirPrint (_ipp._tcp).
 # This init script blocks on cupsd -f, so daemons must start here rather than
 # as sibling s6 services.
+# Clean up any stale sockets/PIDs before launch
+rm -f /run/cups/cupsd.pid /run/cups/cups.sock \
+      /run/dbus/pid /run/dbus/system_bus_socket \
+      /run/avahi-daemon/pid /run/avahi-daemon/socket \
+      /share/cups/state/cupsd.pid 2>/dev/null || true
+
+# D-Bus + Avahi so cupsd can advertise shared queues as AirPrint (_ipp._tcp)
 echo "Starting D-Bus and Avahi for AirPrint..."
 mkdir -p /run/dbus /run/avahi-daemon
 dbus-uuidgen --ensure >/dev/null 2>&1 || true
+
 if [ ! -S /run/dbus/system_bus_socket ]; then
     dbus-daemon --system || echo "Warning: dbus-daemon failed to start"
 fi
+
 for _ in $(seq 1 25); do
     [ -S /run/dbus/system_bus_socket ] && break
     sleep 0.2
 done
+
 if [ ! -S /run/avahi-daemon/socket ]; then
     if avahi-daemon --daemonize --no-drop-root --no-rlimits; then
         echo "Avahi started."
@@ -261,11 +261,40 @@ if [ ! -S /run/avahi-daemon/socket ]; then
         echo "Warning: avahi-daemon failed; AirPrint discovery may not work."
     fi
 fi
+
 for _ in $(seq 1 25); do
     [ -S /run/avahi-daemon/socket ] && break
     sleep 0.2
 done
 
-# Start CUPS service
+# Graceful cleanup handler for container shutdown
+stop_services() {
+    echo "Stopping CUPS print server..."
+    if [ -n "$CUPSD_PID" ] && kill -0 "$CUPSD_PID" 2>/dev/null; then
+        kill -TERM "$CUPSD_PID" 2>/dev/null
+        wait "$CUPSD_PID" 2>/dev/null || true
+    fi
+
+    echo "Stopping Avahi and D-Bus..."
+    [ -f /run/avahi-daemon/pid ] && kill -TERM "$(cat /run/avahi-daemon/pid)" 2>/dev/null || true
+    [ -f /run/dbus/pid ] && kill -TERM "$(cat /run/dbus/pid)" 2>/dev/null || true
+
+    rm -f /run/cups/cupsd.pid /run/cups/cups.sock \
+          /run/dbus/pid /run/dbus/system_bus_socket \
+          /run/avahi-daemon/pid /run/avahi-daemon/socket \
+          /share/cups/state/cupsd.pid 2>/dev/null || true
+
+    echo "Services stopped cleanly."
+    exit 0
+}
+
+# Catch the shutdown signal from Home Assistant
+trap stop_services SIGTERM SIGINT SIGHUP
+
+# Launch CUPS in the background and track its PID
 echo "Starting CUPS daemon..."
-exec /usr/sbin/cupsd -f
+/usr/sbin/cupsd -f &
+CUPSD_PID=$!
+
+# Wait until cupsd terminates or a stop signal is received
+wait "$CUPSD_PID"
