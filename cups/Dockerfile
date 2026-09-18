@@ -40,7 +40,6 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         coreutils \
         perl \
         wget \
-        # Build tools
         build-base \
         fribidi-dev \
         git \
@@ -49,19 +48,18 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         libusb-dev && \
     # Ensure /bin/bash exists for scripts with #!/bin/bash
     [ ! -f /bin/bash ] && [ -f /usr/bin/bash ] && ln -s /usr/bin/bash /bin/bash || true && \
-    # 1. Download and compile JBIG-KIT static library
-    mkdir -p /tmp/jbigkit && \
-    wget https://deb.debian.org/debian/pool/main/j/jbigkit/jbigkit_2.1.orig.tar.gz -O /tmp/jbigkit/jbigkit.tar.gz && \
-    tar -xzf /tmp/jbigkit/jbigkit.tar.gz -C /tmp/jbigkit && \
-    cd /tmp/jbigkit/jbigkit* && \
-    cd libjbig && make lib && cd / && \
-    JBIG_PATH=$(ls -d /tmp/jbigkit/jbigkit*/libjbig) && \
-    # 2. Clone and patch foo2zjs
+    # 1. Download and build JBIG-KIT
+    mkdir -p /tmp/jbigkit-src && \
+    wget https://deb.debian.org/debian/pool/main/j/jbigkit/jbigkit_2.1.orig.tar.gz -O /tmp/jbigkit.tar.gz && \
+    tar -xzf /tmp/jbigkit.tar.gz -C /tmp/jbigkit-src --strip-components=1 && \
+    cd /tmp/jbigkit-src/libjbig && \
+    make lib && \
+    # 2. Clone foo2zjs and patch musl compatibility
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
-    # 3. Compile all engines, helper utilities, and wrapper scripts
-    make CFLAGS="-O2 -D_GNU_SOURCE -I${JBIG_PATH}" LDFLAGS="-L${JBIG_PATH}" \
+    # 3. Build engines and wrappers
+    make CFLAGS="-O2 -D_GNU_SOURCE -I/tmp/jbigkit-src/libjbig" LDFLAGS="-L/tmp/jbigkit-src/libjbig" \
         foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak \
         foo2zjs-pstops arm2hpdl \
         foo2hbpl2-wrapper foo2zjs-wrapper foo2hp-wrapper foo2xqx-wrapper \
@@ -71,7 +69,7 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     install -c -m 755 foo2zjs-pstops arm2hpdl /usr/bin/ && \
     install -c -m 755 foo2*-wrapper /usr/bin/ && \
     install -c -m 755 *decode /usr/bin/ 2>/dev/null || true && \
-    # 5. Create CUPS filter directory symlinks
+    # 5. Create CUPS filter symlinks
     mkdir -p /usr/lib/cups/filter /usr/libexec/cups/filter && \
     for f in /usr/bin/foo2*; do \
         ln -sf "$f" /usr/lib/cups/filter/$(basename "$f"); \
@@ -87,10 +85,12 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     cp -r icm/* /usr/share/foo2qpdl/icm/ 2>/dev/null || true && \
     # 7. Install all PPDs into CUPS model directory
     mkdir -p /usr/share/cups/model && \
-    find PPD -type f -name "*.ppd" -exec cp {} /usr/share/cups/model/ \; && \
-    # 8. Clean up build files and temporary build packages
+    for p in PPD/*.ppd; do \
+        [ -f "$p" ] && cp "$p" /usr/share/cups/model/; \
+    done && \
+    # 8. Clean up build sources and dev dependencies
     cd / && \
-    rm -rf /tmp/foo2zjs /tmp/jbigkit && \
+    rm -rf /tmp/foo2zjs /tmp/jbigkit* && \
     apk del build-base git make cups-dev libusb-dev
 
 # Build and install the Dymo CUPS drivers (LabelWriter/LabelManager). The
