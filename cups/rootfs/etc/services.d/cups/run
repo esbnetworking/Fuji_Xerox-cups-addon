@@ -1,0 +1,43 @@
+#!/usr/bin/with-contenv bash
+
+echo "Starting D-Bus and Avahi for AirPrint..."
+mkdir -p /run/dbus /run/avahi-daemon
+dbus-uuidgen --ensure >/dev/null 2>&1 || true
+
+if [ ! -S /run/dbus/system_bus_socket ]; then
+    dbus-daemon --system || echo "Warning: dbus-daemon failed to start"
+fi
+
+for _ in $(seq 1 25); do
+    [ -S /run/dbus/system_bus_socket ] && break
+    sleep 0.2
+done
+
+if [ ! -S /run/avahi-daemon/socket ]; then
+    avahi-daemon --daemonize --no-drop-root --no-rlimits 2>/dev/null || true
+fi
+
+for _ in $(seq 1 25); do
+    [ -S /run/avahi-daemon/socket ] && break
+    sleep 0.2
+done
+
+# Cleanup trap when s6 tells this service to stop
+stop_services() {
+    echo "Stopping CUPS..."
+    [ -n "$CUPSD_PID" ] && kill -TERM "$CUPSD_PID" 2>/dev/null && wait "$CUPSD_PID" 2>/dev/null || true
+    
+    echo "Stopping Avahi and D-Bus..."
+    [ -f /run/avahi-daemon/pid ] && kill -TERM "$(cat /run/avahi-daemon/pid)" 2>/dev/null || true
+    [ -f /run/dbus/pid ] && kill -TERM "$(cat /run/dbus/pid)" 2>/dev/null || true
+    
+    exit 0
+}
+
+trap stop_services SIGTERM SIGINT SIGHUP
+
+echo "Starting CUPS daemon..."
+/usr/sbin/cupsd -f &
+CUPSD_PID=$!
+
+wait "$CUPSD_PID"
