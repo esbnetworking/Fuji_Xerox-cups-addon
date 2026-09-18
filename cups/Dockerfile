@@ -118,5 +118,8 @@ RUN \
 # Copy data
 COPY rootfs /
 
+# Force executable permissions on all s6 and init scripts
+RUN chmod +x /etc/services.d/cups/* /etc/cont-init.d/* 2>/dev/null || true
+
 # Expose CUPS web interface port
 EXPOSE 631
