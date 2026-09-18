@@ -33,39 +33,65 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         libstdc++ \
         jq \
         bash \
+        bc \
         which \
+        sed \
+        grep \
+        coreutils \
+        perl \
+        wget \
+        # Build tools
         build-base \
         fribidi-dev \
         git \
         make \
-        bc \
         cups-dev \
         libusb-dev && \
+    # Ensure /bin/bash exists for scripts with #!/bin/bash
+    [ ! -f /bin/bash ] && [ -f /usr/bin/bash ] && ln -s /usr/bin/bash /bin/bash || true && \
+    # 1. Download and compile JBIG-KIT static library
+    mkdir -p /tmp/jbigkit && \
+    wget https://deb.debian.org/debian/pool/main/j/jbigkit/jbigkit_2.1.orig.tar.gz -O /tmp/jbigkit/jbigkit.tar.gz && \
+    tar -xzf /tmp/jbigkit/jbigkit.tar.gz -C /tmp/jbigkit && \
+    cd /tmp/jbigkit/jbigkit* && \
+    cd libjbig && make lib && cd / && \
+    JBIG_PATH=$(ls -d /tmp/jbigkit/jbigkit*/libjbig) && \
+    # 2. Clone and patch foo2zjs
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
-    cd jbigkit && \
-    make lib && \
-    cd .. && \
-    # Compile all printer filter engines and decoders
-    make CFLAGS="-O2 -D_GNU_SOURCE -I./jbigkit/libjbig" LDFLAGS="-L./jbigkit/libjbig" \
-        all-test && \
-    # Install all binaries and wrappers to /usr/bin
+    # 3. Compile all engines, helper utilities, and wrapper scripts
+    make CFLAGS="-O2 -D_GNU_SOURCE -I${JBIG_PATH}" LDFLAGS="-L${JBIG_PATH}" \
+        foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak \
+        foo2zjs-pstops arm2hpdl \
+        foo2hbpl2-wrapper foo2zjs-wrapper foo2hp-wrapper foo2xqx-wrapper \
+        foo2lava-wrapper foo2qpdl-wrapper foo2slx-wrapper foo2hiperc-wrapper foo2oak-wrapper && \
+    # 4. Install binaries and wrappers to /usr/bin
     install -c -m 755 foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak /usr/bin/ && \
+    install -c -m 755 foo2zjs-pstops arm2hpdl /usr/bin/ && \
     install -c -m 755 foo2*-wrapper /usr/bin/ && \
     install -c -m 755 *decode /usr/bin/ 2>/dev/null || true && \
-    # Install all ICM color profiles
+    # 5. Create CUPS filter directory symlinks
+    mkdir -p /usr/lib/cups/filter /usr/libexec/cups/filter && \
+    for f in /usr/bin/foo2*; do \
+        ln -sf "$f" /usr/lib/cups/filter/$(basename "$f"); \
+        ln -sf "$f" /usr/libexec/cups/filter/$(basename "$f"); \
+    done && \
+    ln -sf /usr/bin/arm2hpdl /usr/lib/cups/filter/arm2hpdl && \
+    ln -sf /usr/bin/arm2hpdl /usr/libexec/cups/filter/arm2hpdl && \
+    # 6. Install ICM color profiles
     mkdir -p /usr/share/foo2zjs/icm /usr/share/foo2hbpl2/icm /usr/share/foo2hp/icm /usr/share/foo2qpdl/icm && \
     cp -r icm/* /usr/share/foo2zjs/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2hbpl2/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2hp/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2qpdl/icm/ 2>/dev/null || true && \
-    # Install every PPD into CUPS model directory
+    # 7. Install all PPDs into CUPS model directory
     mkdir -p /usr/share/cups/model && \
     find PPD -type f -name "*.ppd" -exec cp {} /usr/share/cups/model/ \; && \
+    # 8. Clean up build files and temporary build packages
     cd / && \
-    rm -rf /tmp/foo2zjs && \
-    apk del build-base git make bc which cups-dev libusb-dev
+    rm -rf /tmp/foo2zjs /tmp/jbigkit && \
+    apk del build-base git make cups-dev libusb-dev
 
 # Build and install the Dymo CUPS drivers (LabelWriter/LabelManager). The
 # Dymo PPDs (e.g. lw4xl.ppd for the LabelWriter 4XL) reference
