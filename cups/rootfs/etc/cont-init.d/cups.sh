@@ -24,7 +24,11 @@ Browsing Yes
 BrowseLocalProtocols dnssd
 DefaultShared Yes
 JobSheets none,none
-PreserveJobHistory No
+PreserveJobHistory Yes
+PreserveJobFiles No
+MaxJobTime 10800
+
+ErrorPolicy retry-job
 
 <Location />
   Order allow,deny
