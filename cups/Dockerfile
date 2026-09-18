@@ -46,7 +46,7 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
         make \
         cups-dev \
         libusb-dev && \
-    # Ensure /bin/bash exists for scripts with #!/bin/bash
+    # Ensure /bin/bash exists for scripts requiring #!/bin/bash
     [ ! -f /bin/bash ] && [ -f /usr/bin/bash ] && ln -s /usr/bin/bash /bin/bash || true && \
     # 1. Download and compile JBIG-KIT static archive libjbig.a
     mkdir -p /tmp/jbigkit-src && \
@@ -57,18 +57,20 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     git clone https://github.com/OpenPrinting/foo2zjs.git /tmp/foo2zjs && \
     cd /tmp/foo2zjs && \
     sed -i 's/#include <sys\/cdefs.h>//g' *.[ch] 2>/dev/null || true && \
-    # 3. Build engines, helper tools, and wrappers
+    # 3. Build ELF engines and PostScript filters
     make CFLAGS="-O2 -D_GNU_SOURCE -I/tmp/jbigkit-src/libjbig" LDFLAGS="-L/tmp/jbigkit-src/libjbig" \
         foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak \
-        foo2zjs-pstops arm2hpdl \
-        foo2hbpl2-wrapper foo2zjs-wrapper foo2hp-wrapper foo2xqx-wrapper \
-        foo2lava-wrapper foo2qpdl-wrapper foo2slx-wrapper foo2hiperc-wrapper foo2oak-wrapper && \
-    # 4. Install binaries and wrappers to /usr/bin
+        foo2zjs-pstops arm2hpdl && \
+    # 4. Generate all wrapper scripts from .in templates
+    for w in foo2*-wrapper.in; do \
+        [ -f "$w" ] && make "${w%.in}"; \
+    done && \
+    # 5. Install binaries and wrappers to /usr/bin
     install -c -m 755 foo2zjs foo2hp foo2xqx foo2lava foo2qpdl foo2slx foo2hiperc foo2hbpl2 foo2oak /usr/bin/ && \
     install -c -m 755 foo2zjs-pstops arm2hpdl /usr/bin/ && \
     install -c -m 755 foo2*-wrapper /usr/bin/ && \
     install -c -m 755 *decode /usr/bin/ 2>/dev/null || true && \
-    # 5. Create CUPS filter symlinks
+    # 6. Create CUPS filter symlinks
     mkdir -p /usr/lib/cups/filter /usr/libexec/cups/filter && \
     for f in /usr/bin/foo2*; do \
         ln -sf "$f" /usr/lib/cups/filter/$(basename "$f"); \
@@ -76,18 +78,18 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/v$(cat /etc/alpine-release | cut 
     done && \
     ln -sf /usr/bin/arm2hpdl /usr/lib/cups/filter/arm2hpdl && \
     ln -sf /usr/bin/arm2hpdl /usr/libexec/cups/filter/arm2hpdl && \
-    # 6. Install ICM color profiles
+    # 7. Install ICM color profiles
     mkdir -p /usr/share/foo2zjs/icm /usr/share/foo2hbpl2/icm /usr/share/foo2hp/icm /usr/share/foo2qpdl/icm && \
     cp -r icm/* /usr/share/foo2zjs/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2hbpl2/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2hp/icm/ 2>/dev/null || true && \
     cp -r icm/* /usr/share/foo2qpdl/icm/ 2>/dev/null || true && \
-    # 7. Install all PPDs into CUPS model directory
+    # 8. Install all PPDs into CUPS model directory
     mkdir -p /usr/share/cups/model && \
     for p in PPD/*.ppd; do \
         [ -f "$p" ] && cp "$p" /usr/share/cups/model/; \
     done && \
-    # 8. Clean up build sources and dev dependencies
+    # 9. Clean up build sources and dev dependencies
     cd / && \
     rm -rf /tmp/foo2zjs /tmp/jbigkit* && \
     apk del build-base git make cups-dev libusb-dev
