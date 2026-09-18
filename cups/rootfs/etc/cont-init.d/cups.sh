@@ -1,5 +1,15 @@
 #!/usr/bin/with-contenv bash
 
+
+# Clean up any leftover pid and socket files from previous unclean shutdowns
+rm -f /run/cups/cupsd.pid \
+      /run/cups/cups.sock \
+      /run/dbus/pid \
+      /run/dbus/system_bus_socket \
+      /run/avahi-daemon/pid \
+      /run/avahi-daemon/socket \
+      /share/cups/state/cupsd.pid 2>/dev/null || true
+
 # ─────────────────────────────────────────────────────────────
 # Create CUPS data directories in the persistent HA share
 # ─────────────────────────────────────────────────────────────
@@ -257,4 +267,5 @@ for _ in $(seq 1 25); do
 done
 
 # Start CUPS service
-/usr/sbin/cupsd -f
+echo "Starting CUPS daemon..."
+exec /usr/sbin/cupsd -f
