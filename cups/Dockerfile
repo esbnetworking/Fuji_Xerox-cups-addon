@@ -118,6 +118,3 @@ COPY rootfs /
 
 # Expose CUPS web interface port
 EXPOSE 631
-
-HEALTHCHECK \
-    CMD lpstat -r || exit 1
