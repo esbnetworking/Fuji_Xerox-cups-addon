@@ -1,12 +1,12 @@
 
 
-# Home Assistant CUPS Print Server App
+# Home Assistant CUPS Print Server App with foo2hbpl2 driver support
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/arest/cups-addon)
 [![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)](https://github.com/arest/cups-addon)
 [![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)](https://github.com/arest/cups-addon)
 
-This Home Assistant app provides a CUPS (Common Unix Printing System) print server, allowing you to manage and share printers over your local network. It's designed for Home Assistant users who want to integrate network printing capabilities directly into their smart home setup.
+This is a fork of Arest's Home Assistant app that provides a CUPS (Common Unix Printing System) print server, allowing you to manage and share printers over your local network. It's designed for Home Assistant users who want to integrate network printing capabilities directly into their smart home setup. It includes the foo2hbpl2 printer drivers and has been optimised to support Android printing and home assistant S6 overlay.
 
 ## Features
 
@@ -24,7 +24,7 @@ This Home Assistant app provides a CUPS (Common Unix Printing System) print serv
 1. Navigate to your Home Assistant instance.
 2. Go to **Settings** → **Apps** → **Install App**.
 3. Click the 3-dot menu in the top right corner and select **Repositories**.
-4. Add `https://github.com/arest/cups-addon` as a repository.
+4. Add `https://github.com/esbnetworking/Fuji_Xerox-cups-addon` as a repository.
 5. Find the "CUPS Print Server" app in the store and click it.
 6. Click **Install**.
 
@@ -34,7 +34,7 @@ If you prefer to manually install:
 
 1. Clone this repository to your local machine:
    ```bash
-   git clone https://github.com/arest/cups-addon.git
+   git clone https://github.com/esbnetworking/Fuji_Xerox-cups-addon.git
    ```
 
 2. Copy the repository to your Home Assistant add-ons directory:
@@ -182,8 +182,8 @@ Any change to `cups/config.yaml` must bump `version` to match the newest
 This project is licensed under the MIT License.
 
 ## Credits
-
-- Built by [Andrea Restello](https://github.com/arest)
+- This build by [Jonathan Mahady](https://github.com/esbnetworking)
+- Originally built by [Andrea Restello](https://github.com/arest)
 - Powered by [Home Assistant](https://www.home-assistant.io/) and [CUPS](https://www.cups.org/)
 
 ## Data Persistence
